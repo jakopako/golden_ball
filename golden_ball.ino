@@ -86,9 +86,12 @@ void loop() {
 
 void useAngle() {
   if((millis()-timer)>100){ // print data every 100ms
-    angles[0] = mpu.getAngleX();
-    angles[1] = mpu.getAngleY();
-    angles[2] = mpu.getAngleZ();
+    angles[0] = abs(mpu.getAngleX() + 90);
+    if (angles[0] > 180) {
+      angles[0] = 360 - angles[0];
+    }
+    angles[1] = mpu.getAngleY() + 90;
+    angles[2] = abs(mpu.getAngleZ());
     Serial.print("X : ");
     Serial.print(angles[0]);
     Serial.print("\tY : ");
@@ -98,7 +101,7 @@ void useAngle() {
 
     for (int i = 0; i < 3; i++) {
       if (abs(oldAngles[i] - angles[i]) > 2 ) {
-        cState[i] = map(angles[i], -90, 90, 0, 127);
+        cState[i] = map(angles[i], 0, 180, 0, 127);
 //        controlChange(midiCh, cc+i, cState[i]); //  (channel, CC number,  CC value)
 //        MidiUSB.flush();
         MIDI.sendControlChange(cc+i, cState[i], midiCh);
