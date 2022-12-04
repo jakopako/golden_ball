@@ -91,7 +91,10 @@ void useAngle() {
       angles[0] = 360 - angles[0];
     }
     angles[1] = mpu.getAngleY() + 90;
-    angles[2] = abs(mpu.getAngleZ());
+    angles[2] = int(abs(mpu.getAngleZ())) % 360;
+    if (angles[2] > 180) {
+      angles[2] = 360 - angles[2];
+    }
     Serial.print("X : ");
     Serial.print(angles[0]);
     Serial.print("\tY : ");
