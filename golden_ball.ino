@@ -17,6 +17,7 @@ BLEMIDI_CREATE_INSTANCE("golden-ball",MIDI);
 
 MPU6050 mpu(Wire);
 
+const byte led_gpio = 12;
 unsigned long timer = 0;
 //bool soundOn = false;
 
@@ -27,6 +28,8 @@ int angles[3] = {0};
 int oldAngles[3] = {0};
 
 void setup() {
+  pinMode(led_gpio, OUTPUT);
+  digitalWrite(led_gpio, LOW);
   MIDI.begin(midiCh);
 //  pinMode(LED_BUILTIN, OUTPUT);
   Serial.begin(9600);
@@ -41,7 +44,9 @@ void setup() {
   delay(1000);
   // mpu.upsideDownMounting = true; // uncomment this line if the MPU6050 is mounted upside-down
   mpu.calcOffsets(); // gyro and accelero
+  // mpu.setFilterGyroCoef(0.9);
   Serial.println("Done!\n");
+  digitalWrite(led_gpio, HIGH);
 //  digitalWrite(LED_BUILTIN, HIGH);
 }
 
@@ -49,43 +54,9 @@ void loop() {
   mpu.update();
   useAngle();
 }
-//    if (soundOn) {
-//      noteOff(0, 48, 100);
-//      MidiUSB.flush();
-//    } else {
-//      noteOn(0, 48, 100);
-//      MidiUSB.flush();
-//    }
-//    soundOn = !soundOn;
-//    controlChange(midiCh, cc, cState); //  (channel, CC number,  CC value)
-//    MidiUSB.flush();
-//    if (cState < 127) {
-//      cState += 2;
-//    }
-//    delay(1000);
-
-//}
-//void noteOn(byte channel, byte pitch, byte velocity) {
-//
-//  midiEventPacket_t noteOn = {0x09, 0x90 | channel, pitch, velocity};
-//
-//  MidiUSB.sendMIDI(noteOn);
-//}
-//
-//void noteOff(byte channel, byte pitch, byte velocity) {
-//
-//  midiEventPacket_t noteOff = {0x08, 0x80 | channel, pitch, velocity};
-//
-//  MidiUSB.sendMIDI(noteOff);
-//}
-//
-//void controlChange(byte channel, byte control, byte value) {
-//  midiEventPacket_t event = {0x0B, 0xB0 | channel, control, value};
-//  MidiUSB.sendMIDI(event);
-//}
 
 void useAngle() {
-  if((millis()-timer)>100){ // print data every 100ms
+  if((millis()-timer)>10){ // print data every 10ms
     angles[0] = abs(mpu.getAngleX() + 90);
     if (angles[0] > 180) {
       angles[0] = 360 - angles[0];
@@ -103,17 +74,12 @@ void useAngle() {
     Serial.println(angles[2]);
 
     for (int i = 0; i < 3; i++) {
-      if (abs(oldAngles[i] - angles[i]) > 2 ) {
+      if (abs(oldAngles[i] - angles[i]) > 0 ) {
         cState[i] = map(angles[i], 0, 180, 0, 127);
-//        controlChange(midiCh, cc+i, cState[i]); //  (channel, CC number,  CC value)
-//        MidiUSB.flush();
         MIDI.sendControlChange(cc+i, cState[i], midiCh);
         oldAngles[i] = angles[i];
       }
     }
-//    cState = map(yAngle, -90, 90, 0, 127);
-//    controlChange(midiCh, cc, cState); //  (channel, CC number,  CC value)
-//    MidiUSB.flush();
     timer = millis();  
   }
 }
