@@ -17,7 +17,7 @@ BLEMIDI_CREATE_INSTANCE("golden-ball",MIDI);
 
 MPU6050 mpu(Wire);
 
-const byte led_gpio = 12;
+const byte led_gpio = 32;
 unsigned long timer = 0;
 //bool soundOn = false;
 
