@@ -44,7 +44,6 @@ int buttonState = 0;
 Quaternion q;                    // [w, x, y, z]         quaternion container
 VectorFloat gravity;             // [x, y, z]            gravity vector
 float ypr[3];                    // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
-float maxYpr[3] = {90, 90, 90};  // the max yaw/pitch/roll at which the midi cc is at a max (127)
 bool absYpr = true;              // whether to take the abs value of yaw, pitch and roll
 
 // midi vars
@@ -108,23 +107,35 @@ void loop() {
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
+//    Serial.print("ypr\t");
+//    Serial.print(ypr[0] * 180 / M_PI);
+//    Serial.print("\t");
+//    Serial.print(ypr[1] * 180 / M_PI);
+//    Serial.print("\t");
+//    Serial.println(ypr[2] * 180 / M_PI);
+
     // calculate midi ccs
     bool outputExists = false;
     if (absYpr) {
       for (int i = 0; i < 3; i++) {
         int absYprDgr = abs(ypr[i] * 180 / M_PI);
-        if (absYprDgr < maxYpr[i]) {
-          int newCc = map(absYprDgr, 0, maxYpr[i], 0, 127);
-          if (abs(newCc - ccs[i]) > 0) {
-            outputExists = true;
-            ccs[i] = newCc;
-            Serial.print("new cc\t");
-            Serial.print(cc + i);
-            Serial.print("\t");
-            Serial.print(newCc);
-            MIDI.sendControlChange(cc + i, ccs[i], midiCh);
-          }
+        int squashedYprDgr = absYprDgr;
+        if (absYprDgr > 90) {
+          squashedYprDgr = 180 - absYprDgr;
         }
+
+        //if (absYprDgr < maxYpr[i]) {
+        int newCc = map(squashedYprDgr, 0, 90, 0, 127);
+        if (abs(newCc - ccs[i]) > 0) {
+          outputExists = true;
+          ccs[i] = newCc;
+          Serial.print("new cc\t");
+          Serial.print(cc + i);
+          Serial.print("\t");
+          Serial.print(newCc);
+          MIDI.sendControlChange(cc + i, ccs[i], midiCh);
+        }
+        //}
       }
     }
     if (outputExists) {
