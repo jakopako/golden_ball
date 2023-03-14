@@ -8,6 +8,7 @@ picam2 = Picamera2()
 # height = 972
 width = 640
 height = 480
+widthPadding = 70
 camera_config = picam2.create_preview_configuration(main={"format": 'XRGB8888', "size": (width, height)})
 
 picam2.configure(camera_config)
@@ -36,7 +37,7 @@ while True:
     # print(blurFrame.shape)
     rows = blurFrame.shape[0] / 8
     circles = cv.HoughCircles(blurFrame, cv.HOUGH_GRADIENT, 1.1, rows,
-                              param1=100, param2=30, minRadius=10, maxRadius=150)
+                              param1=150, param2=40, minRadius=10, maxRadius=150)
 
     # print(circles)
     # should we predict the position if hough doesn't find any circle?
@@ -47,10 +48,9 @@ while True:
 
         for i in circles[0, :]:
             # check if circle is fully within the frame
-            # if  not 0 < i[0] < 640 or not 0 < i[1] < 480:
-            #     continue
+            # plus a certain padding
             
-            if i[0] + i[2] > width or i[0] - i[2] < 0 or i[1] + i[2] > height or i[1] - i[2] < 0:
+            if i[0] + i[2] > width-widthPadding or i[0] - i[2] < 0+widthPadding or i[1] + i[2] > height or i[1] - i[2] < 0:
                 #qqprint(i)
                 continue
 
@@ -65,12 +65,13 @@ while True:
         if chosen is None:
             chosen = prevCircle
         if chosen is not None:
+            #print(chosen)
             cv.circle(blurFrame, (chosen[0], chosen[1]), 1, (0, 100, 100), 3)
             cv.circle(blurFrame, (chosen[0], chosen[1]),
                     chosen[2], (255, 0, 0), 3)
         prevPrevCircle = prevCircle
         prevCircle = chosen
-        now = time.time()
+        # now = time.time()
 
     cv.imshow("circles", blurFrame)
 
