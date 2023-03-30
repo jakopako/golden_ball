@@ -25,11 +25,7 @@ MPU6050 mpu;
    ========================================================================= */
 
 #define INTERRUPT_PIN 34
-#define BLE_LED_PIN 32
-#define MPU_LED_PIN 19
 #define BUTTON_PIN 33
-bool bleLedIsBlinking = true;
-unsigned long bleLedTimer = 0;
 
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
@@ -39,6 +35,15 @@ uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
 uint16_t fifoCount;     // count of all bytes currently in FIFO
 uint8_t fifoBuffer[64]; // FIFO storage buffer
 int buttonState = 0;
+unsigned long buttonTimer = 0;
+uint8_t BLE_LED_PIN = 32;
+uint8_t MPU_LED_PIN = 19;
+bool bleLedIsBlinking = true;
+bool mpuLedIsBlinking = false;
+unsigned long bleLedTimer = 0;
+unsigned long mpuLedTimer = 0;
+bool doInitializeGyro = false;
+int modCounter = 0;
 
 // orientation/motion vars
 Quaternion q;                    // [w, x, y, z]         quaternion container
@@ -93,8 +98,11 @@ void setup() {
 }
 
 void loop() {
-  bleLedBlink();
+  // bleLedBlink();
+  ledBlink(bleLedIsBlinking, bleLedTimer, BLE_LED_PIN);
+  ledBlink(mpuLedIsBlinking, mpuLedTimer, MPU_LED_PIN);
   // (re)initialize if button has been pressed
+  processButtonState();
   initializeGyro();
   // if programming failed, don't try to do anything
   if (!dmpReady) return;
@@ -107,33 +115,36 @@ void loop() {
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
 
-//    Serial.print("ypr\t");
-//    Serial.print(ypr[0] * 180 / M_PI);
-//    Serial.print("\t");
-//    Serial.print(ypr[1] * 180 / M_PI);
-//    Serial.print("\t");
-//    Serial.println(ypr[2] * 180 / M_PI);
+    //    Serial.print("ypr\t");
+    //    Serial.print(ypr[0] * 180 / M_PI);
+    //    Serial.print("\t");
+    //    Serial.print(ypr[1] * 180 / M_PI);
+    //    Serial.print("\t");
+    //    Serial.println(ypr[2] * 180 / M_PI);
 
     // calculate midi ccs
     bool outputExists = false;
     if (absYpr) {
       for (int i = 0; i < 3; i++) {
-        int absYprDgr = abs(ypr[i] * 180 / M_PI);
-        int squashedYprDgr = absYprDgr;
-        if (absYprDgr > 90) {
-          squashedYprDgr = 180 - absYprDgr;
-        }
+        if (modCounter == 0 || modCounter == i + 1) {
+          int absYprDgr = abs(ypr[i] * 180 / M_PI);
+          int squashedYprDgr = absYprDgr;
+          if (absYprDgr > 90) {
+            squashedYprDgr = 180 - absYprDgr;
+          }
 
-        //if (absYprDgr < maxYpr[i]) {
-        int newCc = map(squashedYprDgr, 0, 90, 0, 127);
-        if (abs(newCc - ccs[i]) > 0) {
-          outputExists = true;
-          ccs[i] = newCc;
-          Serial.print("new cc\t");
-          Serial.print(cc + i);
-          Serial.print("\t");
-          Serial.print(newCc);
-          MIDI.sendControlChange(cc + i, ccs[i], midiCh);
+          //if (absYprDgr < maxYpr[i]) {
+          int newCc = map(squashedYprDgr, 0, 90, 0, 127);
+          if (abs(newCc - ccs[i]) > 0) {
+            outputExists = true;
+            ccs[i] = newCc;
+            Serial.print("new cc\t");
+            Serial.print(cc + i);
+            Serial.print("\t");
+            Serial.print(newCc);
+            MIDI.sendControlChange(cc + i, ccs[i], midiCh);
+          }
+
         }
         //}
       }
@@ -162,9 +173,49 @@ void bleLedBlink() {
   }
 }
 
-void initializeGyro() {
+void ledBlink(bool &isBlinking, unsigned long &ledTimer, uint8_t &LED_PIN) {
+  if (isBlinking) {
+    if ((millis() - ledTimer) > 200) {
+      digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+      ledTimer = millis();
+    }
+  }
+}
+
+void processButtonState() {
+  int oldButtonState = buttonState;
   buttonState = digitalRead(BUTTON_PIN);
-  if (buttonState == HIGH) {
+  if (buttonState == 1) {
+    if (oldButtonState == 0) {
+      digitalWrite(MPU_LED_PIN, LOW);
+      buttonTimer = millis();
+    } else {
+      if ((millis() - buttonTimer) > 3000) {
+        mpuLedIsBlinking = true;
+      }
+    }
+  } else {
+    if (mpuLedIsBlinking) {
+      doInitializeGyro = true;
+      mpuLedIsBlinking = false;
+    } else {
+      if (oldButtonState == 1) {
+        if (dmpReady) {
+          digitalWrite(MPU_LED_PIN, HIGH);
+        } else {
+          digitalWrite(MPU_LED_PIN, LOW);
+        }
+        modCounter = (modCounter + 1) % 4;
+      }
+    }
+  }
+}
+
+void initializeGyro() {
+  // buttonState = digitalRead(BUTTON_PIN);
+  //if (buttonState == HIGH) {
+  if (doInitializeGyro) {
+    doInitializeGyro = false;
     digitalWrite(MPU_LED_PIN, LOW);
     Serial.println(F("Initializing I2C devices..."));
     mpu.initialize();
