@@ -44,9 +44,13 @@ unsigned long bleLedTimer = 0;
 unsigned long mpuLedTimer = 0;
 bool doInitializeGyro = false;
 int modCounter = 0;
+unsigned long lastKick = 0;
 
 // orientation/motion vars
 Quaternion q;                    // [w, x, y, z]         quaternion container
+VectorInt16 aa;         // [x, y, z]            accel sensor measurements
+VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
+VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
 VectorFloat gravity;             // [x, y, z]            gravity vector
 float ypr[3];                    // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 bool absYpr = true;              // whether to take the abs value of yaw, pitch and roll
@@ -114,6 +118,10 @@ void loop() {
     mpu.dmpGetQuaternion(&q, fifoBuffer);
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
+    mpu.dmpGetAccel(&aa, fifoBuffer);
+    mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
+    mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+
 
     //    Serial.print("ypr\t");
     //    Serial.print(ypr[0] * 180 / M_PI);
@@ -138,20 +146,29 @@ void loop() {
           if (abs(newCc - ccs[i]) > 0) {
             outputExists = true;
             ccs[i] = newCc;
-            Serial.print("new cc\t");
-            Serial.print(cc + i);
-            Serial.print("\t");
-            Serial.print(newCc);
-            MIDI.sendControlChange(cc + i, ccs[i], midiCh);
+            //            Serial.print("new cc\t");
+            //            Serial.print(cc + i);
+            //            Serial.print("\t");
+            //            Serial.print(newCc);
+            //MIDI.sendControlChange(cc + i, ccs[i], midiCh);
           }
 
         }
-        //}
       }
     }
-    if (outputExists) {
+    if (abs(aaWorld.z) > 3000 && (millis() - lastKick) > 100) {
+      MIDI.sendNoteOn(24, 100, 1); // note 24 (C0), velocity 100 on channel 1
+      lastKick = millis();
+      Serial.print("Kick!  ");
+      Serial.print(aaWorld.z);
       Serial.println("");
+      vTaskDelay(1);
+      MIDI.sendNoteOff(24, 0, 1);
+
     }
+    //    if (outputExists) {
+    //      Serial.println("");
+    //    }
   }
 }
 
