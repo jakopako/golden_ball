@@ -44,7 +44,9 @@ unsigned long bleLedTimer = 0;
 unsigned long mpuLedTimer = 0;
 bool doInitializeGyro = false;
 int modCounter = 0;
-unsigned long lastKick = 0;
+unsigned long lastZ = 0;
+unsigned long lastY = 0;
+unsigned long lastX = 0;
 
 // orientation/motion vars
 Quaternion q;                    // [w, x, y, z]         quaternion container
@@ -120,7 +122,7 @@ void loop() {
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     mpu.dmpGetAccel(&aa, fifoBuffer);
     mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
-    mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
+    //mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
 
 
     //    Serial.print("ypr\t");
@@ -150,20 +152,40 @@ void loop() {
             //            Serial.print(cc + i);
             //            Serial.print("\t");
             //            Serial.print(newCc);
-            //MIDI.sendControlChange(cc + i, ccs[i], midiCh);
+            MIDI.sendControlChange(cc + i, ccs[i], midiCh);
           }
 
         }
       }
     }
-    if (abs(aaWorld.z) > 3000 && (millis() - lastKick) > 100) {
+    if (aaReal.z < -4000 && (millis() - lastZ) > 100) {
       MIDI.sendNoteOn(24, 100, 1); // note 24 (C0), velocity 100 on channel 1
-      lastKick = millis();
-      Serial.print("Kick!  ");
-      Serial.print(aaWorld.z);
-      Serial.println("");
+      lastZ = millis();
+//      Serial.print("Z!  ");
+//      Serial.print(aaReal.z);
+//      Serial.println("");
       vTaskDelay(1);
       MIDI.sendNoteOff(24, 0, 1);
+
+    }
+    if (aaReal.y < -4000 && (millis() - lastY) > 100) {
+      MIDI.sendNoteOn(25, 100, 1);
+      lastY = millis();
+//      Serial.print("Y!  ");
+//      Serial.print(aaReal.y);
+//      Serial.println("");
+      vTaskDelay(1);
+      MIDI.sendNoteOff(25, 0, 1);
+
+    }
+    if (aaReal.x > 4000 && (millis() - lastX) > 100) {
+      MIDI.sendNoteOn(26, 100, 1);
+      lastX = millis();
+//      Serial.print("X!  ");
+//      Serial.print(aaReal.y);
+//      Serial.println("");
+      vTaskDelay(1);
+      MIDI.sendNoteOff(26, 0, 1);
 
     }
     //    if (outputExists) {
