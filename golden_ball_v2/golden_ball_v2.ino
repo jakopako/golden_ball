@@ -119,12 +119,40 @@ void loop() {
     // display Euler angles in degrees
     mpu.dmpGetQuaternion(&q, fifoBuffer);
     mpu.dmpGetGravity(&gravity, &q);
-    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     mpu.dmpGetAccel(&aa, fifoBuffer);
     mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
     //mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
 
 
+    if (aaReal.z < -4000 && (millis() - lastZ) > 100) {
+      MIDI.sendNoteOn(24, 100, 1); // note 24 (C0), velocity 100 on channel 1
+      lastZ = millis();
+      //      Serial.print("Z!  ");
+      //      Serial.print(aaReal.z);
+      //      Serial.println("");
+      vTaskDelay(1);
+      MIDI.sendNoteOff(24, 0, 1);
+
+    }
+    if (aaReal.y < -4000 && (millis() - lastY) > 100) {
+      MIDI.sendNoteOn(25, 100, 1);
+      lastY = millis();
+      //      Serial.print("Y!  ");
+      //      Serial.print(aaReal.y);
+      //      Serial.println("");
+      vTaskDelay(1);
+      MIDI.sendNoteOff(25, 0, 1);
+
+    }
+    if (aaReal.x > 4000 && (millis() - lastX) > 100) {
+      MIDI.sendNoteOn(26, 100, 1);
+      lastX = millis();
+      //      Serial.print("X!  ");
+      //      Serial.print(aaReal.y);
+      //      Serial.println("");
+      vTaskDelay(1);
+      MIDI.sendNoteOff(26, 0, 1);
+    }
     //    Serial.print("ypr\t");
     //    Serial.print(ypr[0] * 180 / M_PI);
     //    Serial.print("\t");
@@ -132,6 +160,8 @@ void loop() {
     //    Serial.print("\t");
     //    Serial.println(ypr[2] * 180 / M_PI);
 
+
+    mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     // calculate midi ccs
     bool outputExists = false;
     if (absYpr) {
@@ -158,36 +188,7 @@ void loop() {
         }
       }
     }
-    if (aaReal.z < -4000 && (millis() - lastZ) > 100) {
-      MIDI.sendNoteOn(24, 100, 1); // note 24 (C0), velocity 100 on channel 1
-      lastZ = millis();
-//      Serial.print("Z!  ");
-//      Serial.print(aaReal.z);
-//      Serial.println("");
-      vTaskDelay(1);
-      MIDI.sendNoteOff(24, 0, 1);
 
-    }
-    if (aaReal.y < -4000 && (millis() - lastY) > 100) {
-      MIDI.sendNoteOn(25, 100, 1);
-      lastY = millis();
-//      Serial.print("Y!  ");
-//      Serial.print(aaReal.y);
-//      Serial.println("");
-      vTaskDelay(1);
-      MIDI.sendNoteOff(25, 0, 1);
-
-    }
-    if (aaReal.x > 4000 && (millis() - lastX) > 100) {
-      MIDI.sendNoteOn(26, 100, 1);
-      lastX = millis();
-//      Serial.print("X!  ");
-//      Serial.print(aaReal.y);
-//      Serial.println("");
-      vTaskDelay(1);
-      MIDI.sendNoteOff(26, 0, 1);
-
-    }
     //    if (outputExists) {
     //      Serial.println("");
     //    }
