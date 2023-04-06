@@ -25,7 +25,7 @@ MPU6050 mpu;
    ========================================================================= */
 
 #define INTERRUPT_PIN 34
-#define BUTTON_PIN 33
+#define BUTTON_PIN 19
 
 // MPU control/status vars
 bool dmpReady = false;  // set true if DMP init was successful
@@ -37,7 +37,7 @@ uint8_t fifoBuffer[64]; // FIFO storage buffer
 int buttonState = 0;
 unsigned long buttonTimer = 0;
 uint8_t BLE_LED_PIN = 32;
-uint8_t MPU_LED_PIN = 19;
+uint8_t MPU_LED_PIN = 33;
 bool bleLedIsBlinking = true;
 bool mpuLedIsBlinking = false;
 unsigned long bleLedTimer = 0;
@@ -78,6 +78,9 @@ void dmpDataReady() {
 // ================================================================
 
 void setup() {
+  // initialize serial communication
+  Serial.begin(9600);
+  while (!Serial);
   // initialize bluetooth connection
   pinMode(BLE_LED_PIN, OUTPUT);
   digitalWrite(BLE_LED_PIN, LOW);
@@ -91,16 +94,15 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT);
   // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+  Serial.println("arduino wire");
   Wire.begin();
   Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+  Serial.println("fastwire");
   Fastwire::setup(400, true);
 #endif
 
-  // initialize serial communication
-  Serial.begin(9600);
-  while (!Serial); // wait for Leonardo enumeration, others continue immediately
-  // initializeGyro();
+
 }
 
 void loop() {
@@ -123,35 +125,39 @@ void loop() {
     mpu.dmpGetLinearAccel(&aaReal, &aa, &gravity);
     //mpu.dmpGetLinearAccelInWorld(&aaWorld, &aaReal, &q);
 
-
-    if (aaReal.z < -4000 && (millis() - lastZ) > 100) {
-      MIDI.sendNoteOn(24, 100, 1); // note 24 (C0), velocity 100 on channel 1
-      lastZ = millis();
-      //      Serial.print("Z!  ");
-      //      Serial.print(aaReal.z);
-      //      Serial.println("");
-      vTaskDelay(1);
-      MIDI.sendNoteOff(24, 0, 1);
-
-    }
-    if (aaReal.y < -4000 && (millis() - lastY) > 100) {
-      MIDI.sendNoteOn(25, 100, 1);
-      lastY = millis();
-      //      Serial.print("Y!  ");
-      //      Serial.print(aaReal.y);
-      //      Serial.println("");
-      vTaskDelay(1);
-      MIDI.sendNoteOff(25, 0, 1);
-
-    }
-    if (aaReal.x > 4000 && (millis() - lastX) > 100) {
-      MIDI.sendNoteOn(26, 100, 1);
-      lastX = millis();
-      //      Serial.print("X!  ");
-      //      Serial.print(aaReal.y);
-      //      Serial.println("");
-      vTaskDelay(1);
-      MIDI.sendNoteOff(26, 0, 1);
+    if (modCounter == 4) {
+      bool hit = false;
+      if (aaReal.z < -4000 && (millis() - lastZ) > 100) {
+        MIDI.sendNoteOn(24, 100, 1); // note 24 (C0), velocity 100 on channel 1
+        lastZ = millis();
+        //      Serial.print("Z!  ");
+        //      Serial.print(aaReal.z);
+        //      Serial.println("");
+        vTaskDelay(1);
+        MIDI.sendNoteOff(24, 0, 1);
+        hit = true;
+      }
+      if (aaReal.y < -4000 && (millis() - lastY) > 100) {
+        MIDI.sendNoteOn(25, 100, 1);
+        lastY = millis();
+        //      Serial.print("Y!  ");
+        //      Serial.print(aaReal.y);
+        //      Serial.println("");
+        vTaskDelay(1);
+        MIDI.sendNoteOff(25, 0, 1);
+        hit = true;
+      }
+      if (aaReal.x > 4000 && (millis() - lastX) > 100) {
+        MIDI.sendNoteOn(26, 100, 1);
+        lastX = millis();
+        //      Serial.print("X!  ");
+        //      Serial.print(aaReal.y);
+        //      Serial.println("");
+        vTaskDelay(1);
+        MIDI.sendNoteOff(26, 0, 1);
+        hit = true;
+      }
+      if (hit) return;
     }
     //    Serial.print("ypr\t");
     //    Serial.print(ypr[0] * 180 / M_PI);
@@ -159,7 +165,6 @@ void loop() {
     //    Serial.print(ypr[1] * 180 / M_PI);
     //    Serial.print("\t");
     //    Serial.println(ypr[2] * 180 / M_PI);
-
 
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     // calculate midi ccs
@@ -245,7 +250,7 @@ void processButtonState() {
         } else {
           digitalWrite(MPU_LED_PIN, LOW);
         }
-        modCounter = (modCounter + 1) % 4;
+        modCounter = (modCounter + 1) % 5;
       }
     }
   }
