@@ -94,11 +94,9 @@ void setup() {
   pinMode(BUTTON_PIN, INPUT);
   // join I2C bus (I2Cdev library doesn't do this automatically)
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-  Serial.println("arduino wire");
   Wire.begin();
   Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
 #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-  Serial.println("fastwire");
   Fastwire::setup(400, true);
 #endif
 
@@ -106,7 +104,6 @@ void setup() {
 }
 
 void loop() {
-  // bleLedBlink();
   ledBlink(bleLedIsBlinking, bleLedTimer, BLE_LED_PIN);
   ledBlink(mpuLedIsBlinking, mpuLedTimer, MPU_LED_PIN);
   // (re)initialize if button has been pressed
@@ -127,7 +124,7 @@ void loop() {
 
     if (modCounter == 4) {
       bool hit = false;
-      if (aaReal.z < -4000 && (millis() - lastZ) > 100) {
+      if (aaReal.z < -4500 && (millis() - lastZ) > 125) {
         MIDI.sendNoteOn(24, 100, 1); // note 24 (C0), velocity 100 on channel 1
         lastZ = millis();
         //      Serial.print("Z!  ");
@@ -137,7 +134,7 @@ void loop() {
         MIDI.sendNoteOff(24, 0, 1);
         hit = true;
       }
-      if (aaReal.y < -4000 && (millis() - lastY) > 100) {
+      if (aaReal.y < -4500 && (millis() - lastY) > 125) {
         MIDI.sendNoteOn(25, 100, 1);
         lastY = millis();
         //      Serial.print("Y!  ");
@@ -147,7 +144,7 @@ void loop() {
         MIDI.sendNoteOff(25, 0, 1);
         hit = true;
       }
-      if (aaReal.x > 4000 && (millis() - lastX) > 100) {
+      if (aaReal.x > 4500 && (millis() - lastX) > 125) {
         MIDI.sendNoteOn(26, 100, 1);
         lastX = millis();
         //      Serial.print("X!  ");
@@ -177,8 +174,6 @@ void loop() {
           if (absYprDgr > 90) {
             squashedYprDgr = 180 - absYprDgr;
           }
-
-          //if (absYprDgr < maxYpr[i]) {
           int newCc = map(squashedYprDgr, 0, 90, 0, 127);
           if (abs(newCc - ccs[i]) > 0) {
             outputExists = true;
@@ -235,7 +230,7 @@ void processButtonState() {
       digitalWrite(MPU_LED_PIN, LOW);
       buttonTimer = millis();
     } else {
-      if ((millis() - buttonTimer) > 3000) {
+      if ((millis() - buttonTimer) > 2000) {
         mpuLedIsBlinking = true;
       }
     }
@@ -257,8 +252,6 @@ void processButtonState() {
 }
 
 void initializeGyro() {
-  // buttonState = digitalRead(BUTTON_PIN);
-  //if (buttonState == HIGH) {
   if (doInitializeGyro) {
     doInitializeGyro = false;
     digitalWrite(MPU_LED_PIN, LOW);
