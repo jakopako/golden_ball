@@ -60,7 +60,7 @@ bool absYpr = true;              // whether to take the abs value of yaw, pitch 
 // midi vars
 int ccs[3] = {0}; // the three midi cc signals that correspond to yaw, pitch and roll
 byte midiCh = 1; // MIDI channel to be used
-byte cc = 1; // Lowest MIDI CC to be used
+byte cc = 20; // Lowest MIDI CC to be used
 
 unsigned long timer = 0;
 
@@ -174,7 +174,8 @@ void loop() {
           if (absYprDgr > 90) {
             squashedYprDgr = 180 - absYprDgr;
           }
-          int newCc = map(squashedYprDgr, 0, 90, 0, 127);
+          int newCc = map(squashedYprDgr, 0, 90, 0, 160);
+          newCc = min(newCc, 127);
           if (abs(newCc - ccs[i]) > 0) {
             outputExists = true;
             ccs[i] = newCc;
